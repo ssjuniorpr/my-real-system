@@ -7,7 +7,7 @@ const items = [
   { to: "/agenda", label: "Agenda", icon: Calendar },
   { to: "/missoes", label: "Missões", icon: Target },
   { to: "/perfil", label: "Perfil", icon: User },
-] as const;
+];
 
 export function BottomNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
