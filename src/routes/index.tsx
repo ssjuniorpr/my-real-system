@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { StatusHeader } from "@/components/system/StatusHeader";
 import { store, useStore } from "@/lib/store";
-import { Wallet, ListChecks, Calendar, Trophy, Zap, Check } from "lucide-react";
+import { getVerseOfTheDay } from "@/lib/bibleVerses";
+import { Wallet, ListChecks, Calendar, Trophy, Zap, Check, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -11,6 +12,8 @@ function Dashboard() {
   const missions = useStore((s) => s.missions);
   const txns = useStore((s) => s.transactions);
   const events = useStore((s) => s.events);
+  const bibleVerseEnabled = useStore((s) => s.bibleVerseEnabled);
+  const verse = getVerseOfTheDay();
 
   const done = missions.filter((m) => m.done).length;
   const total = missions.length;
@@ -23,6 +26,21 @@ function Dashboard() {
   return (
     <div>
       <StatusHeader />
+
+      {bibleVerseEnabled && (
+        <section className="px-5 mt-2 animate-fade-up">
+          <div className="glass rounded-2xl p-4 text-center relative overflow-hidden">
+            <div className="absolute inset-0 opacity-30" style={{ background: "var(--gradient-glow)" }} />
+            <div className="relative">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] tracking-[0.3em] uppercase text-primary">
+                <BookOpen className="w-3.5 h-3.5" /> Versículo do Dia
+              </div>
+              <p className="text-sm mt-2 italic text-foreground/90">"{verse.text}"</p>
+              <div className="text-[11px] text-muted-foreground mt-1.5">{verse.reference}</div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Daily status stat grid */}
       <section className="px-5 mt-2 grid grid-cols-2 gap-3 animate-fade-up">

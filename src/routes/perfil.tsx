@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { StatusHeader } from "@/components/system/StatusHeader";
-import { useStore } from "@/lib/store";
-import { Award, Flame, Sparkles, Target, TrendingUp, Trophy } from "lucide-react";
+import { store, useStore } from "@/lib/store";
+import { Award, BookOpen, Flame, Sparkles, Target, TrendingUp, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/perfil")({
   component: Perfil,
@@ -27,6 +27,7 @@ const ACHIEVEMENTS = [
 function Perfil() {
   const level = useStore((s) => s.level);
   const streak = useStore((s) => s.streak);
+  const bibleVerseEnabled = useStore((s) => s.bibleVerseEnabled);
 
   return (
     <div>
@@ -85,6 +86,35 @@ function Perfil() {
               <div className="text-[10px] leading-tight font-bold tracking-wide uppercase">{a.name}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="px-5 mt-6 animate-fade-up">
+        <h3 className="text-sm font-display font-bold tracking-[0.2em] uppercase mb-3">Configurações</h3>
+        <div className="glass rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-secondary/60 flex items-center justify-center shrink-0">
+              <BookOpen className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold">Versículo Diário</div>
+              <div className="text-[11px] text-muted-foreground">Exibir versículo bíblico na tela inicial</div>
+            </div>
+          </div>
+          <button
+            onClick={() => store.toggleBibleVerse()}
+            role="switch"
+            aria-checked={bibleVerseEnabled}
+            className={`w-12 h-7 rounded-full shrink-0 relative transition-all ${
+              bibleVerseEnabled ? "bg-primary" : "bg-secondary/60"
+            }`}
+          >
+            <span
+              className={`absolute top-1 w-5 h-5 rounded-full bg-background transition-all ${
+                bibleVerseEnabled ? "left-6" : "left-1"
+              }`}
+            />
+          </button>
         </div>
       </section>
 

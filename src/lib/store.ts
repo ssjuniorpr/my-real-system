@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 export type Mission = {
   id: string;
   title: string;
-  category: "Trabalho" | "Academia" | "Estudos" | "Casa" | "Pessoal";
+  category: string;
   xp: number;
   priority: "low" | "med" | "high";
   time?: string;
@@ -26,14 +26,17 @@ export type Transaction = {
 export type AgendaEvent = {
   id: string;
   title: string;
+  date: string; // YYYY-MM-DD
   time: string;
   category: string;
   color: string;
   location?: string;
+  description?: string;
   priority: "low" | "med" | "high";
 };
 
 type State = {
+  totalXp: number;
   level: number;
   xp: number;
   xpToNext: number;
@@ -42,14 +45,20 @@ type State = {
   transactions: Transaction[];
   events: AgendaEvent[];
   lastLevelUp?: number;
+  monthlyBudget?: number;
+  bibleVerseEnabled: boolean;
 };
 
 const todayISO = () => new Date().toISOString();
+const todayDateOnly = () => new Date().toISOString().slice(0, 10);
+
+const XP_PER_LEVEL = 1000;
 
 const state: State = {
+  totalXp: 12420,
   level: 12,
-  xp: 7420,
-  xpToNext: 9000,
+  xp: 420,
+  xpToNext: XP_PER_LEVEL,
   streak: 18,
   missions: [
     { id: "m1", title: "Treinar pernas", category: "Academia", xp: 50, priority: "high", time: "06:30", done: true },
@@ -68,15 +77,28 @@ const state: State = {
     { id: "t5", amount: -350, category: "Casa", description: "Internet", method: "Débito", status: "Pendente", date: todayISO() },
   ],
   events: [
-    { id: "e1", title: "Treino Funcional", time: "06:30", category: "Academia", color: "cyan", priority: "high" },
-    { id: "e2", title: "Daily do time", time: "10:00", category: "Trabalho", color: "violet", location: "Online", priority: "med" },
-    { id: "e3", title: "Consulta médica", time: "15:00", category: "Pessoal", color: "neon", location: "Clínica Vita", priority: "high" },
-    { id: "e4", title: "Curso de inglês", time: "20:00", category: "Estudos", color: "cyan", priority: "med" },
+    { id: "e1", title: "Treino Funcional", date: todayDateOnly(), time: "06:30", category: "Academia", color: "cyan", priority: "high" },
+    { id: "e2", title: "Daily do time", date: todayDateOnly(), time: "10:00", category: "Trabalho", color: "violet", location: "Online", priority: "med" },
+    { id: "e3", title: "Consulta médica", date: todayDateOnly(), time: "15:00", category: "Pessoal", color: "neon", location: "Clínica Vita", priority: "high" },
+    { id: "e4", title: "Curso de inglês", date: todayDateOnly(), time: "20:00", category: "Estudos", color: "cyan", priority: "med" },
   ],
+  bibleVerseEnabled: true,
 };
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
+
+// Level N requires N * XP_PER_LEVEL total accumulated XP (level 0 at start).
+function applyXpChange(delta: number) {
+  const prevLevel = state.level;
+  state.totalXp = Math.max(0, state.totalXp + delta);
+  state.level = Math.floor(state.totalXp / XP_PER_LEVEL);
+  state.xp = state.totalXp % XP_PER_LEVEL;
+  state.xpToNext = XP_PER_LEVEL;
+  if (state.level > prevLevel) {
+    state.lastLevelUp = Date.now();
+  }
+}
 
 export const store = {
   get: () => state,
@@ -84,21 +106,17 @@ export const store = {
     const m = state.missions.find((x) => x.id === id);
     if (!m) return;
     m.done = !m.done;
-    if (m.done) {
-      state.xp += m.xp;
-      if (state.xp >= state.xpToNext) {
-        state.level += 1;
-        state.xp = state.xp - state.xpToNext;
-        state.xpToNext = Math.round(state.xpToNext * 1.2);
-        state.lastLevelUp = Date.now();
-      }
-    } else {
-      state.xp = Math.max(0, state.xp - m.xp);
-    }
+    applyXpChange(m.done ? m.xp : -m.xp);
     notify();
   },
   addMission(m: Omit<Mission, "id" | "done">) {
     state.missions.unshift({ ...m, id: crypto.randomUUID(), done: false });
+    notify();
+  },
+  updateMission(id: string, updates: Omit<Mission, "id" | "done">) {
+    const m = state.missions.find((x) => x.id === id);
+    if (!m) return;
+    Object.assign(m, updates);
     notify();
   },
   addTransaction(t: Omit<Transaction, "id" | "date">) {
@@ -107,7 +125,28 @@ export const store = {
   },
   addEvent(e: Omit<AgendaEvent, "id">) {
     state.events.push({ ...e, id: crypto.randomUUID() });
-    state.events.sort((a, b) => a.time.localeCompare(b.time));
+    state.events.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    notify();
+  },
+  updateEvent(id: string, updates: Omit<AgendaEvent, "id">) {
+    const e = state.events.find((x) => x.id === id);
+    if (!e) return;
+    Object.assign(e, updates);
+    state.events.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    notify();
+  },
+  updateTransaction(id: string, updates: { amount: number; description: string; category: string; method: Transaction["method"]; status: Transaction["status"] }) {
+    const t = state.transactions.find((x) => x.id === id);
+    if (!t) return;
+    Object.assign(t, updates);
+    notify();
+  },
+  setMonthlyBudget(value: number | undefined) {
+    state.monthlyBudget = value;
+    notify();
+  },
+  toggleBibleVerse() {
+    state.bibleVerseEnabled = !state.bibleVerseEnabled;
     notify();
   },
   clearLevelUp() {
